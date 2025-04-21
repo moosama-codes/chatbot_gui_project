@@ -73,37 +73,42 @@ class ChatbotApp(ctk.CTk):
 
 
 
+        self.chat_history = []
 
 
     def ask_general_question(self):
-        user_input = self.entry.get().strip()
+            user_input = self.entry.get().strip()
 
-        if not user_input:
+            if not user_input:
+                self.textbox.configure(state="normal")
+                self.textbox.insert("end", "\n⚠️ Please type something before clicking Ask!\n")
+                self.textbox.configure(state="disabled")
+                return
+
             self.textbox.configure(state="normal")
-            self.textbox.insert("end", "\n⚠️ Please type something before clicking Ask!\n")
-            self.textbox.configure(state="disabled")
-            return
+            self.textbox.insert("end", f"\n👤 You said: {user_input}\n")
 
-        self.textbox.configure(state="normal")
-        self.textbox.insert("end", f"\n👤 You said: {user_input}\n")
+            try:
+                from chatbot_general import chat_with_deepseek
 
-        try:
-            if hasattr(self, "file_path") and self.file_path:
-                from chatbot_askfile import ask_file
-                response = ask_file(user_input)
-            else:
-                from chatbot_general import ask_general
-                response = ask_general(user_input)
+                if hasattr(self, "file_path") and self.file_path:
+                    with open(self.file_path, "r", encoding="utf-8") as f:
+                        file_content = f.read()
+
+                    combined_prompt = f"Based on the following document:\n\n{file_content}\n\nAnswer this question:\n{user_input}"
+                    response, self.chat_history = chat_with_deepseek(combined_prompt, self.chat_history)
+
+                else:
+                    response, self.chat_history = chat_with_deepseek(user_input, self.chat_history)
+
                 self.last_bot_reply = response
 
-        except Exception as e:
-            response = f"⚠️ Error: {str(e)}"
+            except Exception as e:
+                response = f"⚠️ Error: {str(e)}"
 
-        self.textbox.insert("end", f"🤖 ChatBuddy replied: {response}\n")
-        self.textbox.configure(state="disabled")
-
-        self.entry.delete(0, 'end')
-
+            self.textbox.insert("end", f"🤖 ChatBuddy replied: {response}\n")
+            self.textbox.configure(state="disabled")
+            self.entry.delete(0, 'end')
 
     def upload_file(self):
         import tkinter.filedialog as fd
@@ -136,6 +141,36 @@ class ChatbotApp(ctk.CTk):
 
     
 
+    
+
+    def summarize_file(self):
+        if not hasattr(self, 'file_path') or not self.file_path:
+            self.textbox.configure(state="normal")
+            self.textbox.insert("end", "\n⚠️ Please upload a file first to summarize.\n")
+            self.textbox.configure(state="disabled")
+            return
+
+        try:
+            with open(self.file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            prompt = f"Please summarize the following document:\n\n{content}"
+
+            from chatbot_general import chat_with_deepseek
+            summary, self.chat_history = chat_with_deepseek(prompt, self.chat_history)
+
+        except Exception as e:
+            summary = f"⚠️ Error summarizing file: {str(e)}"
+
+        self.textbox.configure(state="normal")
+        self.textbox.insert("end", f"\n📄 Summary:\n{summary}\n")
+        self.textbox.configure(state="disabled")
+
+
+
+
+
+
     def translate_last_response(self):
         from translator import translate_text
 
@@ -163,35 +198,6 @@ class ChatbotApp(ctk.CTk):
             return
 
         speak(self.last_bot_reply)
-    
-
-    def summarize_file(self):
-        if not hasattr(self, 'file_path') or not self.file_path:
-            self.textbox.configure(state="normal")
-            self.textbox.insert("end", "\n⚠️ Please upload a file first to summarize.\n")
-            self.textbox.configure(state="disabled")
-            return
-
-        from file_handler import load_file
-        from summarizer import summarize
-
-        try:
-            content = load_file(self.file_path)
-            summary = summarize(content)
-        except Exception as e:
-            summary = f"⚠️ Error summarizing file: {str(e)}"
-
-        self.textbox.configure(state="normal")
-        self.textbox.insert("end", f"\n📝 Summary:\n{summary}\n")
-        self.textbox.configure(state="disabled")
-
-
-
-
-
-
-
-
 
 
 
