@@ -14,12 +14,16 @@ HEADERS = {
     "X-Title": "Local Chatbot Test"
 }
 
-def chat_with_deepseek(prompt):
+def chat_with_deepseek(prompt, history=None):
+    if history is None:
+        history = []
+
+    # Add the new user message to the conversation history
+    history.append({"role": "user", "content": prompt})
+
     payload = {
-        "model": "deepseek/deepseek-r1-zero:free",  # This is the correct model name
-        "messages": [
-            {"role": "user", "content": prompt}
-        ],
+        "model": "deepseek/deepseek-r1-zero:free",
+        "messages": history,
         "temperature": 0.7
     }
 
@@ -27,14 +31,23 @@ def chat_with_deepseek(prompt):
         response = requests.post(API_URL, headers=HEADERS, data=json.dumps(payload))
         response.raise_for_status()
         reply = response.json()["choices"][0]["message"]["content"]
-        return reply
+
+        # Add the assistant's reply to the history
+        history.append({"role": "assistant", "content": reply})
+
+        return reply, history
+
     except requests.exceptions.RequestException as e:
-        return f"🔴 Request error: {e}"
+        return f"🔴 Request error: {e}", history
     except KeyError:
-        return "🔴 Unexpected response format."
+        return "🔴 Unexpected response format.", history
 
 # Test block
 if __name__ == "__main__":
-    user_input = input("👤 You: ")
-    reply = chat_with_deepseek(user_input)
-    print("🤖 DeepSeek:", reply)
+    history = []
+    while True:
+        user_input = input("👤 You: ")
+        if user_input.lower() in ["exit", "quit"]:
+            break
+        reply, history = chat_with_deepseek(user_input, history)
+        print("🤖 ", reply)
