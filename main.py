@@ -11,38 +11,52 @@ class ChatbotApp(ctk.CTk):
         super().__init__()
 
         self.title("Smart Chatbot")
-        self.geometry("600x650")
+        self.geometry("620x650")
 
         self.chat_history = []
         self.file_path = None
         self.last_bot_reply = ""
 
-        # ---- Top Menus ----
+        # ---- Top Frame for Menus and Buttons ----
+        self.top_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.top_frame.pack(padx=10, pady=(10, 0), fill="x")
+
+        # Tools Menu
         self.tools_var = ctk.StringVar(value="🛠 Tools")
         self.tools_menu = ctk.CTkOptionMenu(
-            self, values=["🌍 Translate", "🔊 Speak"],
+            self.top_frame, values=["🌍 Translate", "🔊 Speak"],
             command=self.handle_tool_selection,
             variable=self.tools_var, width=150)
-        self.tools_menu.place(x=10, y=10)
+        self.tools_menu.pack(side="left", padx=(0, 10))
 
+        # Lecture Tools Menu
         self.lecture_tools_var = ctk.StringVar(value="📘 Lecture Tools")
         self.lecture_tools_menu = ctk.CTkOptionMenu(
-            self, values=["📝 Summarize", "❓ Generate Quiz", "💡 Flashcards", "📄 Notes", "🔍 Explain"],
+            self.top_frame, values=["📝 Summarize", "❓ Generate Quiz", "💡 Flashcards", "📄 Notes", "🔍 Explain"],
             command=self.handle_lecture_tool,
-            variable=self.lecture_tools_var, width=200)
-        self.lecture_tools_menu.place(x=170, y=10)
-        self.lecture_tools_menu.configure(state="disabled")
+            variable=self.lecture_tools_var, width=200,
+            state="disabled")
+        self.lecture_tools_menu.pack(side="left", padx=(0, 10))
 
-        # Upload Button (Top-right)
+        # Upload Button
         self.upload_button = ctk.CTkButton(
-            self, text="📄 Upload File",
+            self.top_frame, text="📄 Upload File",
             command=self.upload_file,
             width=150)
-        self.upload_button.place(x=400, y=10)
+        self.upload_button.pack(side="right", padx=(10, 0))
+
+        # View File Button
+        self.view_file_button = ctk.CTkButton(
+            self.top_frame, text="📖 View File",
+            command=self.show_file_popup,
+            width=150,
+            state="disabled"
+        )
+        self.view_file_button.pack(side="right", padx=(10, 0))
 
         # ---- Welcome Label ----
         label = ctk.CTkLabel(self, text="")
-        label.pack(pady=20)
+        label.pack(pady=10)
 
         # ---- Chat Frame ----
         self.chat_frame = ctk.CTkScrollableFrame(self, width=500, height=450)
@@ -85,7 +99,11 @@ class ChatbotApp(ctk.CTk):
         except Exception as e:
             response = f"⚠️ Error: {str(e)}"
 
-        self.append_chat_bubble("🤖", response)
+        # Clean the response
+        cleaned_response = self.clean_response(response)
+        self.animate_bot_response(cleaned_response)
+
+
         self.entry.delete(0, 'end')
 
     def upload_file(self):
@@ -106,6 +124,8 @@ class ChatbotApp(ctk.CTk):
             self.file_path = file_path
             self.append_chat_bubble("🤖", f"📁 File uploaded: {os.path.basename(file_path)}")
             self.lecture_tools_menu.configure(state="normal")
+            self.view_file_button.configure(state="normal")
+
         except Exception as e:
             self.append_chat_bubble("🤖", f"⚠️ Failed to read file: {str(e)}")
 
@@ -125,8 +145,9 @@ class ChatbotApp(ctk.CTk):
 
         except Exception as e:
             summary = f"⚠️ Error summarizing file: {str(e)}"
-
-        self.append_chat_bubble("🤖", f"📄 Summary:\n{summary}")
+        
+        cleaned_summary = self.clean_response(summary)
+        self.animate_bot_response(f"📄 Summary:\n{cleaned_summary}")
 
 
 
@@ -151,7 +172,10 @@ class ChatbotApp(ctk.CTk):
         except Exception as e:
             quiz = f"⚠️ Error generating quiz: {str(e)}"
 
-        self.append_chat_bubble("🤖", f"📝 Quiz:\n{quiz}")
+        
+        cleaned_quiz = self.clean_response(quiz)
+        formatted_quiz = self.format_quiz(cleaned_quiz)
+        self.animate_bot_response(f"📝 Quiz:\n{formatted_quiz}")
 
     def generate_flashcards_from_file(self):
         if not self.file_path:
@@ -174,7 +198,10 @@ class ChatbotApp(ctk.CTk):
         except Exception as e:
             flashcards = f"⚠️ Error generating flashcards: {str(e)}"
 
-        self.append_chat_bubble("🤖", f"💡 Flashcards:\n{flashcards}")
+        cleaned_flashcards = self.clean_response(flashcards)
+        formatted_flashcards = self.format_flashcards(cleaned_flashcards)
+        self.animate_bot_response(f"💡 Flashcards:\n{formatted_flashcards}")
+
 
 
     def generate_notes_from_file(self):
@@ -198,7 +225,10 @@ class ChatbotApp(ctk.CTk):
         except Exception as e:
             notes = f"⚠️ Error generating notes: {str(e)}"
 
-        self.append_chat_bubble("🤖", f"📄 Notes:\n{notes}")
+        cleaned_notes = self.clean_response(notes)
+        formatted_notes = self.format_notes(cleaned_notes)
+        self.animate_bot_response(f"📄 Notes:\n{formatted_notes}")
+
 
 
     def explain_file_concepts(self):
@@ -222,42 +252,113 @@ class ChatbotApp(ctk.CTk):
         except Exception as e:
             explanation = f"⚠️ Error generating explanations: {str(e)}"
 
-        self.append_chat_bubble("🤖", f"🔍 Explained Concepts:\n{explanation}")
+        cleaned_explanation = self.clean_response(explanation)
+        self.animate_bot_response( f"🔍 Explained Concepts:\n{cleaned_explanation}")
+
+
+    def format_quiz(self, raw_quiz):
+        lines = raw_quiz.split('\n')
+        formatted_quiz = ""
+        question_number = 1
+        current_question = ""
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue  # تخطي الأسطر الفارغة
+
+            if line.lower().startswith("q") or "?" in line:
+                # لو بدأ بسؤال
+                if current_question:
+                    formatted_quiz += f"{current_question}\n\n"
+                current_question = f"Q{question_number}. {line}"
+                question_number += 1
+            elif line.lower().startswith(("a)", "b)", "c)", "d)")):
+                # لو اختيار
+                current_question += f"\n    {line}"
+            else:
+                # لو حاجة مش مفهومة أضفها كما هي
+                current_question += f"\n    {line}"
+
+        if current_question:
+            formatted_quiz += f"{current_question}\n"
+
+        return formatted_quiz.strip()
+    
+
+    def format_flashcards(self, raw_flashcards):
+        lines = raw_flashcards.split('\n')
+        formatted_flashcards = ""
+        question_count = 1
+        current_card = ""
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            if line.lower().startswith("q:"):
+                if current_card:
+                    formatted_flashcards += f"{current_card}\n\n"
+                current_card = f"Flashcard {question_count}:\n{line}"
+                question_count += 1
+            elif line.lower().startswith("a:"):
+                current_card += f"\n   {line}"
+            else:
+                current_card += f"\n   {line}"
+
+        if current_card:
+            formatted_flashcards += f"{current_card}\n"
+
+        return formatted_flashcards.strip()
+
+
+    def format_notes(self, raw_notes):
+        lines = raw_notes.split('\n')
+        formatted_notes = ""
+        
+        for line in lines:
+            line = line.strip()
+            if line:
+                formatted_notes += f"• {line}\n\n"  # نضيف سطر فاضي بعد كل نقطة
+
+        return formatted_notes.strip()
+
+
+
+
+
+
         
     
         
 
 
+    def show_file_popup(self):
+        if not self.file_path:
+            self.append_chat_bubble("🤖", "⚠️ No file uploaded to view.")
+            return
+
+        from file_handler import load_file
+
+        try:
+            content = load_file(self.file_path)
+
+            popup = ctk.CTkToplevel(self)
+            popup.title("📖 File Content")
+            popup.geometry("500x400")
+
+            textbox = ctk.CTkTextbox(popup, wrap="word")
+            textbox.insert("1.0", content)
+            textbox.configure(state="disabled")  # خليه Read Only
+            textbox.pack(padx=10, pady=10, fill="both", expand=True)
+
+        except Exception as e:
+            self.append_chat_bubble("🤖", f"⚠️ Error loading file for view: {str(e)}")
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
 
     def translate_last_response(self):
         from translator import translate_text
@@ -305,6 +406,50 @@ class ChatbotApp(ctk.CTk):
         message_label.pack(padx=10, pady=5)
         self.chat_row += 1
         self.chat_frame._parent_canvas.yview_moveto(1.0)
+
+
+    def clean_response(self, text):
+        import re
+
+        # Remove Latex-like patterns: \boxed{...}, \text{...}, \begin{...}, \end{...}
+        text = re.sub(r'\\boxed\{([^}]*)\}', r'\1', text)
+        text = re.sub(r'\\text\{([^}]*)\}', r'\1', text)
+        text = re.sub(r'\\begin\{[^}]*\}', '', text)
+        text = re.sub(r'\\end\{[^}]*\}', '', text)
+        text = re.sub(r'\$\$', '', text)  # Remove any double dollar signs (math mode)
+
+        # Remove isolated LaTeX commands like \frac, \sqrt, etc.
+        text = re.sub(r'\\[a-zA-Z]+\s*', '', text)
+
+        # Replace common LaTeX linebreaks or spaces
+        text = text.replace("\\n", "\n")
+        text = text.replace("\\", "")
+
+        # Remove extra spaces
+        text = re.sub(r'\s+', ' ', text)
+
+        return text.strip()
+     
+
+    def animate_bot_response(self, text):
+        import threading
+        import time
+
+        bubble = ctk.CTkLabel(self.chat_frame, text="", anchor="w", justify="left", wraplength=450)
+        bubble.grid(row=self.chat_row, column=0, sticky="w", padx=10, pady=5)
+        self.chat_row += 1
+
+        def type_text():
+            displayed_text = ""
+            for char in text:
+                displayed_text += char
+                bubble.configure(text=displayed_text)
+                self.update_idletasks()
+                time.sleep(0.02)  # سرعة الكتابة (كل 20 ملي ثانية حرف)
+
+        # نشغل الكتابة في Thread عشان التطبيق ما يهنجش
+        threading.Thread(target=type_text).start()
+
 
 if __name__ == "__main__":
     app = ChatbotApp()
