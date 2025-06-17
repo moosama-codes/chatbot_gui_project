@@ -367,7 +367,8 @@ class ChatbotApp(ctk.CTk):
             self.append_chat_bubble("🤖", "⚠️ Please enter text to translate.")
             return
         translated = translate_text(user_input, dest="ar")
-        self.append_chat_bubble("🤖", f"🌍 Translated: {translated}")
+        self.append_chat_bubble("🤖", f"🌍 Translated:\n{translated}", align="right")
+
 
     def speak_last_response(self):
         from tts import speak
@@ -396,14 +397,23 @@ class ChatbotApp(ctk.CTk):
             self.explain_file_concepts()
         self.lecture_tools_var.set("📘 Lecture Tools")
 
-    def append_chat_bubble(self, sender, message):
+    def append_chat_bubble(self, sender, message, align="left"):
         anchor = "e" if sender == "👤" else "w"
         bg_color = "#128C7E" if sender == "👤" else "#E4E6EB"
         text_color = "white" if sender == "👤" else "black"
+
         bubble_frame = ctk.CTkFrame(self.chat_frame, fg_color=bg_color, corner_radius=12)
         bubble_frame.grid(row=self.chat_row, column=0, padx=10, pady=5, sticky=anchor)
-        message_label = ctk.CTkLabel(bubble_frame, text=message, wraplength=400, justify="left", text_color=text_color)
+
+        message_label = ctk.CTkLabel(
+            bubble_frame,
+            text=message,
+            wraplength=400,
+            justify=align,       # ✨ هنا بنستخدم المتغير الجديد
+            text_color=text_color
+        )
         message_label.pack(padx=10, pady=5)
+
         self.chat_row += 1
         self.chat_frame._parent_canvas.yview_moveto(1.0)
 
@@ -445,7 +455,7 @@ class ChatbotApp(ctk.CTk):
                 displayed_text += char
                 bubble.configure(text=displayed_text)
                 self.update_idletasks()
-                time.sleep(0.02)  # سرعة الكتابة (كل 20 ملي ثانية حرف)
+                time.sleep(0.001)  # سرعة الكتابة (كل 20 ملي ثانية حرف)
 
         # نشغل الكتابة في Thread عشان التطبيق ما يهنجش
         threading.Thread(target=type_text).start()
