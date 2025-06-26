@@ -140,7 +140,7 @@ class ChatbotApp(ctk.CTk):
             from chatbot_general import chat_with_deepseek
 
             content = load_file(self.file_path)
-            prompt = f"Please summarize the following document:\n\n{content}"
+            prompt = f"Please summarize the following document in a good and short way:\n\n{content}"
             summary, self.chat_history = chat_with_deepseek(prompt, self.chat_history)
 
         except Exception as e:
