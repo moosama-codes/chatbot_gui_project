@@ -455,7 +455,7 @@ class ChatbotApp(ctk.CTk):
                 displayed_text += char
                 bubble.configure(text=displayed_text)
                 self.update_idletasks()
-                time.sleep(0.001)  # سرعة الكتابة (كل 20 ملي ثانية حرف)
+                time.sleep(0.00001)  # سرعة الكتابة (كل 20 ملي ثانية حرف)
 
         # نشغل الكتابة في Thread عشان التطبيق ما يهنجش
         threading.Thread(target=type_text).start()
